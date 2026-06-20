@@ -6,9 +6,9 @@ services:
     restart: unless-stopped
 
     environment:
-      POSTGRES_DB: oil_lab
-      POSTGRES_USER: oiladmin
-      POSTGRES_PASSWORD: oiladmin123
+      POSTGRES_DB: ${DB_NAME:-oil_lab}
+      POSTGRES_USER: ${DB_USER:-oiladmin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-oiladmin123}
 
     ports:
       - "5433:5432"
@@ -17,6 +17,16 @@ services:
       - ./db/data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-oiladmin} -d ${DB_NAME:-oil_lab}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    networks:
+      - oil-lab-net
+
   oil-lab-api:
     build:
       context: ./api
@@ -24,14 +34,29 @@ services:
     restart: unless-stopped
 
     depends_on:
-      - oil-lab-db
+      oil-lab-db:
+        condition: service_healthy
 
     environment:
       DB_HOST: oil-lab-db
       DB_PORT: 5432
-      DB_NAME: oil_lab
-      DB_USER: oiladmin
-      DB_PASSWORD: oiladmin123
+      DB_NAME: ${DB_NAME:-oil_lab}
+      DB_USER: ${DB_USER:-oiladmin}
+      DB_PASSWORD: ${DB_PASSWORD:-oiladmin123}
 
     ports:
       - "8009:8008"
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    networks:
+      - oil-lab-net
+
+networks:
+  oil-lab-net:
+    name: oil-lab-net
