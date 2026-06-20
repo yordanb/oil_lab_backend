@@ -1,0 +1,37 @@
+services:
+
+  oil-lab-db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: oil-lab-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: oil_lab
+      POSTGRES_USER: oiladmin
+      POSTGRES_PASSWORD: oiladmin123
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+
+  oil-lab-api:
+    build:
+      context: ./api
+    container_name: oil-lab-api
+    restart: unless-stopped
+
+    depends_on:
+      - oil-lab-db
+
+    environment:
+      DB_HOST: oil-lab-db
+      DB_PORT: 5432
+      DB_NAME: oil_lab
+      DB_USER: oiladmin
+      DB_PASSWORD: oiladmin123
+
+    ports:
+      - "8009:8008"
